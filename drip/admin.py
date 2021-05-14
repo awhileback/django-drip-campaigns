@@ -17,6 +17,20 @@ from drip.utils import get_user_model, get_simple_fields
 
 class QuerySetRuleInline(admin.TabularInline):
     model = QuerySetRule
+    extra = 2
+
+    def get_formset(self, request, obj=None, **kwargs):
+        initial = []
+        if request.method == "GET":
+            initial.append({
+                'method_type': 'filter',
+                'lookup_type': 'exact',
+                'field_name': 'is_subscribed',
+                'field_value': 1
+            })
+        formset = super(QuerySetRuleInline, self).get_formset(request, obj, **kwargs)
+        formset.__init__ = curry(formset.__init__, initial=initial)
+        return formset
 
 
 class DripForm(forms.ModelForm):
