@@ -1,6 +1,7 @@
 import operator
 import functools
 import logging
+import re
 
 from django.conf import settings
 from django.db.models import Q
@@ -8,6 +9,9 @@ from django.template import Context, Template
 from importlib import import_module
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from users.tokens import unsubscribe_token
 
 from drip.models import SentDrip
 from drip.utils import get_user_model
@@ -66,7 +70,10 @@ class DripMessage(object):
     @property
     def context(self):
         if not self._context:
-            self._context = Context({'user': self.user})
+            token = unsubscribe_token.make_token(self.user)
+            uid = urlsafe_base64_encode(force_bytes(self.user.email))
+            unsub_link = settings.BASE_URL + '/unsubscribe/' + uid + '/' + token + '/'
+            self._context = Context({'user': self.user, 'settings': settings, 'unsubscribe': unsub_link})
         return self._context
 
     @property
@@ -88,7 +95,10 @@ class DripMessage(object):
     @property
     def plain(self):
         if not self._plain:
-            self._plain = strip_tags(self.body)
+            self._strip_footer_link = re.sub(r'<br><br>(.*)<a href="', '\n\n\n\nClick the link below to unsubscribe from future emails:\n', self.body)
+            self._strip_footer_tags = re.sub(r'\">here(.*)future emails.<\/p>', '', self._strip_footer_link)
+            self._strip_markup = strip_tags(self._strip_footer_tags)
+            self._plain = self._strip_markup
         return self._plain
 
     def get_from_(self):
