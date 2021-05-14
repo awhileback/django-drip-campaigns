@@ -3,6 +3,11 @@ from datetime import datetime
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from modelcluster.models import ClusterableModel
+from modelcluster.fields import ParentalKey
+from wagtail.core.models import Orderable
+from wagtail.admin.edit_handlers import FieldPanel, InlinePanel
+
 
 from drip.utils import get_user_model
 from .types import (
@@ -78,8 +83,21 @@ class AbstractDrip(models.Model):
         return self.name
 
 
-class Drip(AbstractDrip):
-    pass
+class Drip(AbstractDrip, ClusterableModel):
+    body_html_template = models.TextField(
+        null=True,
+        blank=True,
+        help_text='You will have settings and user in the context. For example {{ user.first_name }} {{ user.last_name }}will return "Joe Smith", and {{ settings.BASE_URL }} will return your domain name.'
+    )
+    panels = [
+        FieldPanel('name'),
+        FieldPanel('enabled'),
+        FieldPanel('from_email'),
+        FieldPanel('from_email_name'),
+        FieldPanel('subject_template'),
+        FieldPanel('body_html_template'),
+        InlinePanel('queryset_rules'),
+    ]
 
 
 class AbstractSentDrip(models.Model):
@@ -129,15 +147,34 @@ LOOKUP_TYPES = (
     ('contains', 'contains'),
     ('icontains', 'contains (case insensitive)'),
     ('regex', 'regex'),
-    ('iregex', 'contains (case insensitive)'),
+    ('iregex', 'regex (case insensitive)'),
     ('gt', 'greater than'),
     ('gte', 'greater than or equal to'),
     ('lt', 'less than'),
     ('lte', 'less than or equal to'),
     ('startswith', 'starts with'),
-    ('endswith', 'starts with'),
-    ('istartswith', 'ends with (case insensitive)'),
+    ('istartswith', 'starts with (case insensitive)'),
+    ('endswith', 'ends with'),
     ('iendswith', 'ends with (case insensitive)'),
+)
+
+FIELD_NAMES = (
+    ('id', 'User id'),
+    ('is_superuser', 'Is admin?'),
+    ('is_staff', 'Is staff member?'),
+    ('first_name', 'First name'),
+    ('last_name', 'Last name'),
+    ('email', 'Email address'),
+    ('is_active', 'Is signup activated?'),
+    ('socialaccount__is_active', 'Is signup activated? (social signups only)'),
+    ('is_subscribed', 'Is email subscribed?'),
+    ('socialaccount__is_subscribed', 'Is email subscribed? (social signups only)'),
+    ('date_joined', 'Date joined'),
+    ('socialaccount__date_joined', 'Date joined (social signups only)'),
+    ('last_login', 'Last login'),
+    ('socialaccount__last_login', 'Last login (social signups only)'),
+    ('groups', 'Member of group'),
+    ('socialaccount__groups', 'Member of group (social signups only)'),
 )
 
 RULE_TYPES = (
@@ -325,8 +362,32 @@ class AbstractQuerySetRule(models.Model):
         abstract = True
 
 
-class QuerySetRule(AbstractQuerySetRule):
-    pass
+class QuerySetRule(AbstractQuerySetRule, Orderable):
+    drip = ParentalKey(
+        Drip,
+        related_name='queryset_rules',
+        on_delete=models.CASCADE,
+    )
+
+    method_type = models.CharField(
+        max_length=100,
+        default='filter',
+        choices=METHOD_TYPES,
+    )
+    field_name = models.CharField(
+        max_length=100, default='last_login', choices=FIELD_NAMES
+    )
+    lookup_type = models.CharField(
+        max_length=100, default='exact', choices=LOOKUP_TYPES
+    )
+    
+    panels = [
+        FieldPanel('method_type'),
+        FieldPanel('field_name'),
+        FieldPanel('lookup_type'),
+        FieldPanel('rule_type'),
+        FieldPanel('field_value'),
+    ]
 
 
 class TestUserUUIDModel(models.Model):
