@@ -194,4 +194,4 @@ admin.site.register(SentDrip, SentDripAdmin)
 Drip._meta.get_field('body_html_template').default = '<br /><br /><p style="text-align:center;font-size:small;">Click <a href="https://{{ unsubscribe }}">here</a> to unsubscribe from future emails.</p>'
 Drip._meta.get_field('from_email_name').default = settings.EMAIL_ADMIN
 Drip._meta.get_field('from_email').default = settings.SERVER_EMAIL
-Drip._meta.get_field('reply_to').default = settings.SERVER_EMAIL
+
