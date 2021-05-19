@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.urls import path
 from django.db import models
 from django.forms import TextInput
+from django.utils.functional import curry
 from django_summernote.widgets import SummernoteWidget
 
 from drip.models import Drip, SentDrip, QuerySetRule
