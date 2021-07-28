@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.urls import path
+from functools import partial as curry
 from django.db import models
 from django.forms import TextInput
 from django_summernote.widgets import SummernoteWidget
@@ -17,7 +18,6 @@ from drip.utils import get_user_model, get_simple_fields
 
 class QuerySetRuleInline(admin.TabularInline):
     model = QuerySetRule
-    
 
 class DripForm(forms.ModelForm):
     message_class = forms.ChoiceField(
@@ -180,4 +180,3 @@ admin.site.register(SentDrip, SentDripAdmin)
 Drip._meta.get_field('body_html_template').default = '<br /><br /><p style="text-align:center;font-size:small;">Click <a href="https://{{ unsubscribe }}">here</a> to unsubscribe from future emails.</p>'
 Drip._meta.get_field('from_email_name').default = settings.EMAIL_ADMIN
 Drip._meta.get_field('from_email').default = settings.SERVER_EMAIL
-

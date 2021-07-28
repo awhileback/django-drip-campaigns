@@ -41,6 +41,7 @@ class AbstractDrip(models.Model):
         max_length=150,
         null=True,
         blank=True,
+        default=settings.EMAIL_ADMIN,
         help_text='Set a name for a custom from email.'
     )
     subject_template = models.TextField(null=True, blank=True)
@@ -87,8 +88,7 @@ class Drip(AbstractDrip, ClusterableModel):
     body_html_template = models.TextField(
         null=True,
         blank=True,
-        help_text='You will have settings and user in the context. For example {{ user.first_name }} {{ user.last_name }}will return "Joe Smith", and {{ settings.BASE_URL }} will return your domain name.'
-    )
+        help_text='You have all of the user fields in the context. For example {{ first_name }} {{ last_name }} will return "Joe Smith".')
     panels = [
         FieldPanel('name'),
         FieldPanel('enabled'),
@@ -98,6 +98,14 @@ class Drip(AbstractDrip, ClusterableModel):
         FieldPanel('body_html_template'),
         InlinePanel('queryset_rules'),
     ]
+
+    class Meta:
+        abstract = False
+        app_label = 'drip'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 
 class AbstractSentDrip(models.Model):
@@ -133,7 +141,13 @@ class AbstractSentDrip(models.Model):
 
 
 class SentDrip(AbstractSentDrip):
-    pass
+    name = models.ForeignKey(
+        'drip.Drip',
+        null=True,
+        to_field='name',
+        db_column='name',
+        on_delete=models.CASCADE,
+    )
 
 
 METHOD_TYPES = (
@@ -167,8 +181,12 @@ FIELD_NAMES = (
     ('email', 'Email address'),
     ('is_active', 'Is signup activated?'),
     ('socialaccount__is_active', 'Is signup activated? (social signups only)'),
-    ('is_subscribed', 'Is email subscribed?'),
-    ('socialaccount__is_subscribed', 'Is email subscribed? (social signups only)'),
+    ('is_mailsubscribed', 'Is email subscribed?'),
+    ('socialaccount__is_mailsubscribed', 'Is email subscribed? (social signups only)'),
+    ('is_paysubscribed', 'Is paid subscriber?'),
+    ('socialaccount__is_paysubscribed', 'Is paid subscriber? (social signups only)'),
+    ('is_smssubscribed', 'Is text/sms subscribed?'),
+    ('socialaccount__is_smssubscribed', 'Is text/sms subscribed? (social signups only)'),
     ('date_joined', 'Date joined'),
     ('socialaccount__date_joined', 'Date joined (social signups only)'),
     ('last_login', 'Last login'),
@@ -385,8 +403,8 @@ class QuerySetRule(AbstractQuerySetRule, Orderable):
         FieldPanel('method_type'),
         FieldPanel('field_name'),
         FieldPanel('lookup_type'),
-        FieldPanel('rule_type'),
         FieldPanel('field_value'),
+        FieldPanel('rule_type'),
     ]
 
 

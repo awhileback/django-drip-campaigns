@@ -5,6 +5,7 @@ import re
 
 from django.conf import settings
 from django.db.models import Q
+from django.forms.models import model_to_dict
 from django.template import Context, Template
 from importlib import import_module
 from django.core.mail import EmailMultiAlternatives
@@ -73,7 +74,9 @@ class DripMessage(object):
             token = unsubscribe_token.make_token(self.user)
             uid = urlsafe_base64_encode(force_bytes(self.user.email))
             unsub_link = settings.BASE_URL + '/unsubscribe/' + uid + '/' + token + '/'
-            self._context = Context({'user': self.user, 'settings': settings, 'unsubscribe': unsub_link})
+            user_context = model_to_dict(self.user, exclude=['groups'])
+            unsub_context = { 'unsubscribe': unsub_link }
+            self._context = Context({**user_context, **unsub_context})
         return self._context
 
     @property
@@ -305,9 +308,10 @@ class DripBase(object):
             message_instance = MessageClass(self, user)
             try:
                 result = message_instance.message.send()
-                if result:
+                if not result:
                     SentDrip.objects.create(
                         drip=self.drip_model,
+                        name=self.drip_model,
                         user=user,
                         from_email=self.from_email,
                         from_email_name=self.from_email_name,
